@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify Template Converter Tool</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Bootstrap Icons for upload icon -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .list-group-item.log-entry {
+            border: 0;
+            border-left: 4px solid;
+            padding-left: 1rem;
+            font-size: 0.9rem;
+        }
+        .log-info { border-color: #0d6efd; }
+        .log-success { border-color: #198754; }
+        .log-warn { border-color: #ffc107; }
+        .log-error { border-color: #dc3545; }
+        .file-drop-zone {
+            border: 2px dashed var(--bs-border-color);
+            transition: all 0.2s ease-in-out;
+        }
+        .file-drop-zone:hover, .file-drop-zone.dragover {
+            border-color: var(--bs-primary);
+            background-color: var(--bs-gray-700);
+        }
+    </style>
+</head>
+<body class="bg-body-tertiary text-light">
+
+    <!-- Donate Button -->
+    <button type="button" class="btn btn-outline-warning position-absolute top-0 end-0 m-3" data-bs-toggle="modal" data-bs-target="#donateModal">
+        <i class="bi bi-cup-hot-fill me-2"></i> Donate a coffee
+    </button>
+    
+    <div class="d-flex align-items-center justify-content-center min-vh-100 p-3">
+        <div class="container-sm bg-body-secondary p-4 p-md-5 rounded-4 shadow-lg" style="max-width: 42rem;">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="display-5 fw-bold text-body-emphasis mb-2">Shopify Template Converter Tool</h1>
+                <p class="text-white-50">Upload a .zip file to automatically convert Padding and Header attributes.</p>
+            </div>
+
+            <!-- Conversion Options -->
+            <div class="bg-body-tertiary p-3 rounded-3 mb-4">
+                <h3 class="h5 fw-semibold text-body-emphasis mb-3">Conversion Options</h3>
+                <div class="d-flex flex-column flex-sm-row gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="" id="convert-padding" checked>
+                        <label class="form-check-label" for="convert-padding">
+                            Convert Padding
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="" id="convert-header" checked>
+                        <label class="form-check-label" for="convert-header">
+                            Convert Header Blocks
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Upload Area -->
+            <div class="mb-4">
+                 <label for="zip-upload" class="form-label file-drop-zone w-100 text-center p-5 rounded-3 cursor-pointer">
+                    <i class="bi bi-cloud-arrow-up-fill fs-1 text-secondary"></i>
+                    <p class="mb-2 text-white-50"><span class="fw-semibold text-primary">Click to upload</span> or drag and drop a file</p>
+                    <p class="text-muted small">Only .ZIP files are accepted</p>
+                </label>
+                <input id="zip-upload" type="file" class="d-none" accept=".zip">
+            </div>
+
+            <!-- Log & Download Area -->
+            <div id="status-area" class="d-none">
+                 <h2 class="h4 fw-semibold text-body-emphasis border-bottom pb-2 mb-3">Processing Progress</h2>
+                 <div id="log-container" class="list-group overflow-y-auto bg-body-tertiary rounded-2" style="max-height: 16rem;">
+                    <!-- Log messages will be inserted here -->
+                </div>
+                <a id="download-btn" class="btn btn-success btn-lg w-100 d-none mt-4">
+                    <i class="bi bi-download me-2"></i>
+                    Download converted .zip file
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Donate Modal -->
+    <div class="modal fade" id="donateModal" tabindex="-1" aria-labelledby="donateModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="donateModalLabel">Buy Me a Coffee</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <p class="text-white-50">If you find this tool helpful, please support me with a coffee!</p>
+            <!-- IMPORTANT: Replace the src below with your own QR Code image link -->
+            <img src="./z7029430621906_4a78c238a3fed4472428fd8f4873f55b.jpg" class="img-fluid rounded" alt="QR Code for donation">
+            <p class="mt-2 small text-muted">Scan the QR code with your banking app.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        const uploadInput = document.getElementById('zip-upload');
+        const statusArea = document.getElementById('status-area');
+        const logContainer = document.getElementById('log-container');
+        const downloadBtn = document.getElementById('download-btn');
+        const convertPaddingCheckbox = document.getElementById('convert-padding');
+        const convertHeaderCheckbox = document.getElementById('convert-header');
+
+        function logMessage(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `list-group-item list-group-item-dark log-entry log-${type} py-2`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // --- Conversion Logic ---
+        function convertPaddingInObject(obj) {
+            let wasModified = false;
+            if (Array.isArray(obj)) {
+                obj.forEach(item => {
+                    if (convertPaddingInObject(item)) wasModified = true;
+                });
+            } else if (typeof obj === 'object' && obj !== null) {
+                if (obj.hasOwnProperty('padding_top') && obj.hasOwnProperty('padding_bottom') && obj.hasOwnProperty('padding_rate')) {
+                    const paddingTop = parseFloat(obj.padding_top) || 0;
+                    const paddingBottom = parseFloat(obj.padding_bottom) || 0;
+                    const paddingRate = parseFloat(obj.padding_rate) || 100;
+                    const mbPaddingTop = paddingTop * (paddingRate / 100);
+                    const mbPaddingBottom = paddingBottom * (paddingRate / 100);
+                    obj.pd = `${paddingTop}px,0,${paddingBottom}px,0`;
+                    obj.pd_mb = `${mbPaddingTop}px,0,${mbPaddingBottom}px,0`;
+                    delete obj.padding_top;
+                    delete obj.padding_bottom;
+                    delete obj.padding_rate;
+                    wasModified = true;
+                }
+                for (const key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        if (convertPaddingInObject(obj[key])) wasModified = true;
+                    }
+                }
+            }
+            return wasModified;
+        }
+        
+        function convertHeaderBlocks(jsonData) {
+            let wasModified = false;
+            const sectionTypeMap = {'header-inline': 'header-inline-blocks', 'header-menu-bottom': 'header-menu-bottom-blocks'};
+            const blockTypesToConvert = new Set(['html', 'mega_shop', 'mega_product', 'mega_sale', 'mega_page', 'mega_blog']);
+            const newBlockDefaults = {"html": "", "page": "", "blog": "", "product_list": [], "collection_list": [], "limit": 8, "image_ratio": "adapt_image", "image_size": true, "navUI": true, "collection_colors": "", "product_list_title": "BEST SELLER", "child_menu": ""};
+
+            const convertSection = (section) => {
+                if (!section || typeof section !== 'object' || !section.type || !sectionTypeMap[section.type]) return;
+                
+                const originalType = section.type;
+                section.type = sectionTypeMap[originalType];
+                wasModified = true;
+
+                if (section.blocks && section.block_order) {
+                    const newBlocks = {};
+                    section.block_order.forEach(blockId => {
+                        const oldBlock = section.blocks[blockId];
+                        if (oldBlock) {
+                            if (blockTypesToConvert.has(oldBlock.type)) {
+                                const newSettings = {...newBlockDefaults, ...oldBlock.settings, mega_presets: oldBlock.type};
+                                newBlocks[blockId] = {type: '_mega_block', name: 'Mega Block', settings: newSettings, blocks: oldBlock.blocks || {}};
+                            } else {
+                                newBlocks[blockId] = oldBlock;
+                            }
+                        }
+                    });
+                    section.blocks = newBlocks;
+                }
+            };
+            if (jsonData.sections) {
+                Object.values(jsonData.sections).forEach(convertSection);
+            }
+            convertSection(jsonData);
+            return wasModified;
+        }
+
+        async function handleFileUpload(event) {
+            const file = (event.target.files || event.dataTransfer.files)[0];
+            if (!file || !file.name.endsWith('.zip')) {
+                alert('Please upload a file with .zip extension only');
+                return;
+            }
+            statusArea.classList.remove('d-none');
+            logContainer.innerHTML = '';
+            downloadBtn.classList.add('d-none');
+            logMessage(`Reading file: ${file.name}...`, 'info');
+
+            try {
+                const zip = await JSZip.loadAsync(file);
+                const outputZip = new JSZip();
+                const doConvertPadding = convertPaddingCheckbox.checked;
+                const doConvertHeader = convertHeaderCheckbox.checked;
+                
+                const processingPromises = [];
+
+                zip.forEach((relativePath, zipEntry) => {
+                    const promise = async () => {
+                        // This is the safest logic: only process what's necessary, copy everything else.
+                        
+                        // Rule 1: Define what to process
+                        const isHeaderGroup = relativePath === 'sections/header-group.json';
+                        const isTemplateFile = relativePath.startsWith('templates/') && relativePath.endsWith('.json');
+                        let shouldProcess = (doConvertHeader && isHeaderGroup) || (doConvertPadding && isTemplateFile);
+
+                        if (shouldProcess) {
+                            try {
+                                const content = await zipEntry.async('string');
+                                const shopifyCommentRegex = /\/\*[\s\S]*?\*\//g;
+                                const cleanContent = content.replace(shopifyCommentRegex, '').trim();
+
+                                if (!cleanContent) {
+                                    outputZip.file(relativePath, await zipEntry.async('blob'));
+                                    return;
+                                }
+
+                                const data = JSON.parse(cleanContent);
+                                let isModified = false;
+
+                                if (doConvertPadding && isTemplateFile) {
+                                    if (convertPaddingInObject(data)) isModified = true;
+                                }
+                                if (doConvertHeader && isHeaderGroup) {
+                                    if (convertHeaderBlocks(data)) isModified = true;
+                                }
+
+                                if (isModified) {
+                                    logMessage(`Đã xử lý: ${relativePath}`, 'success');
+                                    const newContent = JSON.stringify(data, null, 2);
+                                    outputZip.file(relativePath, newContent);
+                                } else {
+                                    outputZip.file(relativePath, await zipEntry.async('blob'));
+                                }
+                            } catch (e) {
+                                logMessage(`Lỗi khi xử lý ${relativePath}. Giữ nguyên file gốc.`, 'error');
+                                outputZip.file(relativePath, await zipEntry.async('blob'));
+                            }
+                        } else {
+                            // Rule 2: Copy everything else (files and folders)
+                            if (!zipEntry.dir) {
+                                outputZip.file(relativePath, await zipEntry.async('blob'));
+                            } else {
+                                outputZip.folder(relativePath);
+                            }
+                        }
+                    };
+                    processingPromises.push(promise());
+                });
+
+                await Promise.all(processingPromises);
+
+                logMessage('Processing complete. Creating .zip file for download...', 'info');
+                const blob = await outputZip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(blob);
+                downloadBtn.href = url;
+                downloadBtn.download = `converted_${file.name}`;
+                downloadBtn.classList.remove('d-none');
+                logMessage('Ready to download!', 'success');
+
+            } catch (error) {
+                logMessage(`A critical error occurred: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        const dropZone = document.querySelector('.file-drop-zone');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); });
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'));
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'));
+        });
+        
+        dropZone.addEventListener('drop', (e) => handleFileUpload({ target: e.dataTransfer }));
+        uploadInput.addEventListener('change', handleFileUpload);
+    </script>
+</body>
+</html>
