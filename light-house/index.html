@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify AI Performance Advisor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+        .score-red { color: #ff453a; }
+        .score-orange { color: #ff9f0a; }
+        .score-green { color: #30d158; }
+        
+        .progress-ring {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: conic-gradient(var(--color, #30d158) calc(var(--value) * 1%), #444 0);
+            transition: all 0.5s ease-in-out;
+        }
+        .progress-ring::before {
+            content: "";
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            background: #1f2937;
+            border-radius: 50%;
+        }
+        .progress-ring-value {
+            position: relative;
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+        details > summary .chevron { transition: transform 0.2s; }
+        details[open] > summary .chevron { transform: rotate(90deg); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* Styling for Gemini output */
+        #gemini-suggestions-content h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid #4b5563;
+            padding-bottom: 0.5rem;
+        }
+        #gemini-suggestions-content ul, #gemini-suggestions-content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+            list-style-type: disc;
+        }
+        #gemini-suggestions-content li {
+            margin-bottom: 0.5rem;
+        }
+        #gemini-suggestions-content code {
+            background-color: #111827;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            border-radius: 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+         #gemini-suggestions-content pre {
+            background-color: #111827;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        #gemini-suggestions-content pre code {
+            padding: 0;
+            background: none;
+        }
+        #gemini-suggestions-content a {
+            color: #818cf8;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <!-- SVG Icons Definition -->
+    <svg width="0" height="0" class="hidden">
+        <symbol viewBox="0 0 24 24" id="icon-chevron">
+            <path fill="currentColor" d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" />
+        </symbol>
+    </svg>
+
+    <div class="w-full max-w-6xl mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">Shopify AI Performance Advisor</h1>
+            <p class="text-gray-400">Phân tích và nhận gợi ý tối ưu hóa từ AI.</p>
+        </header>
+
+        <main>
+            <!-- Input Form -->
+            <div class="bg-gray-800 p-6 rounded-xl shadow-lg mb-8 sticky top-0 z-10 backdrop-blur-sm bg-gray-800/80">
+                <form id="test-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div class="md:col-span-4">
+                        <label for="url" class="block text-sm font-medium text-gray-300 mb-2">Shopify Preview URL</label>
+                        <input type="url" id="url" name="url" placeholder="https://your-store.myshopify.com/..." required class="w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                    </div>
+                    <div class="md:col-span-4">
+                        <button type="submit" id="submit-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center">
+                            <span id="button-text">Chạy Phân Tích</span>
+                            <svg id="button-spinner" class="animate-spin h-5 w-5 text-white ml-3 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Area -->
+            <div id="results-container" class="hidden space-y-8">
+                 <div id="error-message" class="hidden bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg" role="alert"></div>
+                
+                 <!-- Summary Scores -->
+                <div id="summary-scores" class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"></div>
+                
+                <!-- Detailed Reports -->
+                <div id="detailed-reports" class="space-y-4"></div>
+
+                <!-- AI Suggestions Section -->
+                <div id="gemini-section" class="hidden">
+                    <button id="get-suggestions-button" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center mb-4">
+                        <span id="gemini-button-text">Nhận Gợi Ý Tối Ưu Hóa</span>
+                        <svg id="gemini-button-spinner" class="animate-spin h-5 w-5 text-white ml-3 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                    <div id="gemini-suggestions" class="bg-gray-800 rounded-xl p-6 hidden">
+                        <h2 class="text-2xl font-bold text-white mb-4">Gợi Ý Tối Ưu Hóa từ AI</h2>
+                        <div id="gemini-suggestions-content" class="prose prose-invert max-w-none text-gray-300"></div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const form = document.getElementById('test-form');
+        const submitButton = document.getElementById('submit-button');
+        const buttonText = document.getElementById('button-text');
+        const buttonSpinner = document.getElementById('button-spinner');
+        const resultsContainer = document.getElementById('results-container');
+        const errorMessage = document.getElementById('error-message');
+        const summaryScoresContainer = document.getElementById('summary-scores');
+        const detailedReportsContainer = document.getElementById('detailed-reports');
+        const geminiSection = document.getElementById('gemini-section');
+        const getSuggestionsButton = document.getElementById('get-suggestions-button');
+        const geminiSuggestionsContainer = document.getElementById('gemini-suggestions');
+        const geminiSuggestionsContent = document.getElementById('gemini-suggestions-content');
+
+        let lighthouseResultCache = null;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('url').value;
+
+            if (!url) {
+                showError('Vui lòng nhập đầy đủ URL.');
+                return;
+            }
+
+            setLoading(true, 'submit-button');
+            hideError();
+            resultsContainer.classList.add('hidden');
+            geminiSection.classList.add('hidden');
+            geminiSuggestionsContainer.classList.add('hidden');
+            [summaryScoresContainer, detailedReportsContainer, geminiSuggestionsContent].forEach(el => el.innerHTML = '');
+
+            const pagespeedApiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&key=AIzaSyAis7ikmkVePRNiYLpUYgxWRH1h_9ReqL4&strategy=mobile&category=PERFORMANCE&category=ACCESSIBILITY&category=BEST_PRACTICES&category=SEO`;
+
+            try {
+                const response = await fetch(pagespeedApiUrl);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || `API request failed with status ${response.status}`);
+                }
+                const data = await response.json();
+                if (data.lighthouseResult) {
+                    lighthouseResultCache = data.lighthouseResult; // Cache result
+                    displayResults(lighthouseResultCache);
+                } else {
+                    throw new Error("Invalid response structure from API.");
+                }
+            } catch (error) {
+                console.error('Error fetching PageSpeed API:', error);
+                showError(`Đã xảy ra lỗi khi phân tích: ${error.message}.`);
+            } finally {
+                setLoading(false, 'submit-button');
+            }
+        });
+        
+        getSuggestionsButton.addEventListener('click', async () => {
+            if (!lighthouseResultCache) {
+                 showError('Không tìm thấy kết quả Lighthouse để phân tích.');
+                return;
+            }
+
+            setLoading(true, 'get-suggestions-button');
+            geminiSuggestionsContainer.classList.remove('hidden');
+            geminiSuggestionsContent.innerHTML = '<p>AI đang phân tích và tạo gợi ý, vui lòng chờ trong giây lát...</p>';
+
+            try {
+                const prompt = createPromptForGemini(lighthouseResultCache);
+                const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyAxc_SGnFxhyEesRM04pps3GK3uLaPpc2g`;
+
+                const response = await fetch(geminiApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                     throw new Error(errorData.error.message || `Gemini API request failed with status ${response.status}`);
+                }
+
+                const data = await response.json();
+                const suggestions = data.candidates[0].content.parts[0].text;
+                geminiSuggestionsContent.innerHTML = marked.parse(suggestions);
+
+            } catch(error) {
+                console.error('Error fetching Gemini API:', error);
+                geminiSuggestionsContent.innerHTML = `<p class="text-red-400">Đã có lỗi xảy ra khi gọi Gemini API: ${error.message}</p>`;
+            } finally {
+                 setLoading(false, 'get-suggestions-button');
+            }
+        });
+
+        function setLoading(isLoading, buttonId) {
+            const button = document.getElementById(buttonId);
+            const textEl = button.querySelector('span');
+            const spinnerEl = button.querySelector('svg');
+            
+            const originalText = {
+                'submit-button': 'Chạy Phân Tích',
+                'get-suggestions-button': 'Nhận Gợi Ý Tối Ưu Hóa từ Gemini AI'
+            }[buttonId];
+            
+            const loadingText = {
+                'submit-button': 'Đang phân tích...',
+                'get-suggestions-button': 'Đang lấy gợi ý...'
+            }[buttonId];
+
+            textEl.textContent = isLoading ? loadingText : originalText;
+            spinnerEl.classList.toggle('hidden', !isLoading);
+            button.disabled = isLoading;
+            button.classList.toggle('opacity-75', isLoading);
+            button.classList.toggle('cursor-not-allowed', isLoading);
+        }
+
+        function displayResults(lighthouseResult) {
+            resultsContainer.classList.remove('hidden');
+            displaySummaryScores(lighthouseResult.categories);
+            displayDetailedReports(lighthouseResult);
+            geminiSection.classList.remove('hidden');
+        }
+
+        function getScoreColor(score) {
+            if (score >= 0.9) return 'green';
+            if (score >= 0.5) return 'orange';
+            return 'red';
+        }
+        
+        function displaySummaryScores(categories) {
+            const scoreOrder = ['performance', 'accessibility', 'best-practices', 'seo'];
+            summaryScoresContainer.innerHTML = scoreOrder.map(key => {
+                if (!categories[key]) return '';
+                const category = categories[key];
+                const score = Math.round(category.score * 100);
+                const color = getScoreColor(category.score);
+                const ringColor = { green: '#30d158', orange: '#ff9f0a', red: '#ff453a' }[color];
+                return `
+                    <div class="bg-gray-800 p-4 rounded-xl shadow-lg flex flex-col items-center justify-center text-center">
+                        <div class="progress-ring" style="--value: ${score}; --color: ${ringColor};">
+                            <span class="progress-ring-value score-${color}">${score}</span>
+                        </div>
+                        <h3 class="text-md font-semibold mt-3 text-white">${category.title}</h3>
+                    </div>`;
+            }).join('');
+        }
+
+        function displayDetailedReports(lighthouseResult) {
+            const categoryOrder = ['performance']; // Focus on performance for suggestions
+            detailedReportsContainer.innerHTML = categoryOrder.map(catKey => {
+                 const category = lighthouseResult.categories[catKey];
+                if (!category || !category.auditRefs) return '';
+
+                const opportunities = category.auditRefs
+                    .filter(ref => ref.group === 'opportunities' && lighthouseResult.audits[ref.id].score < 1)
+                    .map(ref => lighthouseResult.audits[ref.id])
+                    .sort((a, b) => (a.details?.overallSavingsMs || 0) < (b.details?.overallSavingsMs || 0) ? 1 : -1);
+
+                const diagnostics = category.auditRefs
+                    .filter(ref => ref.group === 'diagnostics' && lighthouseResult.audits[ref.id].score < 1)
+                    .map(ref => lighthouseResult.audits[ref.id]);
+                
+                const passed = category.auditRefs
+                    .filter(ref => !ref.group && lighthouseResult.audits[ref.id].score === 1)
+                    .map(ref => lighthouseResult.audits[ref.id]);
+
+                return `
+                    ${createReportSection('Cơ hội', 'Đây là những gợi ý giúp trang của bạn tải nhanh hơn.', opportunities)}
+                    ${createReportSection('Chẩn đoán', 'Thông tin chi tiết hơn về hiệu suất của trang.', diagnostics)}
+                `;
+            }).join('');
+        }
+
+        function createReportSection(title, description, audits) {
+            if (audits.length === 0) return '';
+            return `
+                 <div class="bg-gray-800 rounded-xl p-4">
+                    <h3 class="text-xl font-bold">${title}</h3>
+                    <p class="text-sm text-gray-400 mb-4">${description}</p>
+                    <div class="space-y-2">
+                        ${audits.map(createAuditItem).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function createAuditItem(audit) {
+            const scoreDisplayMode = audit.scoreDisplayMode;
+            let icon;
+            if (scoreDisplayMode === 'binary' || scoreDisplayMode === 'numeric') {
+                 icon = audit.score === 1 ? '✅' : '🔴';
+            } else {
+                 icon = 'ℹ️';
+            }
+            return `
+                <div class="bg-gray-700/50 rounded-lg p-3 flex items-center gap-3">
+                    <span class="text-lg">${icon}</span>
+                    <span class="flex-grow text-sm font-medium text-gray-200">${audit.title}</span>
+                    ${audit.displayValue ? `<span class="text-sm font-semibold text-gray-300 flex-shrink-0">${audit.displayValue}</span>` : ''}
+                </div>
+            `;
+        }
+
+        function createPromptForGemini(lighthouseResult) {
+            const performanceCategory = lighthouseResult.categories.performance;
+            let prompt = `You are an expert Shopify theme developer and a web performance optimization specialist.
+I have run a Google Lighthouse test on my Shopify store. My overall performance score is ${Math.round(performanceCategory.score * 100)}.
+
+Here are the key issues identified under "Opportunities" and "Diagnostics":
+
+**Opportunities (items that offer the most improvement):**
+`;
+            const opportunities = performanceCategory.auditRefs
+                .filter(ref => ref.group === 'opportunities' && lighthouseResult.audits[ref.id].score < 1)
+                .map(ref => lighthouseResult.audits[ref.id]);
+            
+            if (opportunities.length > 0) {
+                opportunities.forEach(audit => {
+                    prompt += `- ${audit.title} (Potential savings: ${audit.displayValue || 'N/A'})\n`;
+                });
+            } else {
+                prompt += "- No major opportunities found. Great!\n";
+            }
+            
+            prompt += `
+**Diagnostics (more detailed performance information):**
+`;
+            const diagnostics = performanceCategory.auditRefs
+                .filter(ref => ref.group === 'diagnostics' && lighthouseResult.audits[ref.id].score < 1)
+                .map(ref => lighthouseResult.audits[ref.id]);
+            
+             if (diagnostics.length > 0) {
+                diagnostics.forEach(audit => {
+                    prompt += `- ${audit.title}\n`;
+                });
+            } else {
+                prompt += "- No major diagnostic issues found.\n";
+            }
+
+            prompt += `
+Based *only* on the information above, provide a prioritized list of concrete, actionable steps to improve my theme's performance. 
+
+For each suggestion:
+1.  Start with a clear heading for the issue (e.g., "### 1. Tối ưu hóa hình ảnh").
+2.  Explain in simple terms *why* this is a problem for a Shopify store.
+3.  Provide specific, step-by-step instructions on *how* to fix it within the Shopify environment. Mention specific Liquid files (e.g., \`product-card.liquid\`), theme settings, or Shopify Apps where applicable.
+4.  If possible, provide short Liquid or JavaScript code snippets as examples.
+
+Format the entire response in clear, easy-to-read Markdown.
+**Please write the entire response in Vietnamese.**
+`;
+            return prompt;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            resultsContainer.classList.add('hidden'); // Hide main results on error
+        }
+
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
+
